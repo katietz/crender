@@ -1,0 +1,3 @@
+[submodule "Jinja2Cpp"]
+	path = Jinja2Cpp
+	url = ../Jinja2Cpp
