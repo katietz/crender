@@ -367,7 +367,7 @@ int main(int argc, char **argv)
       {
         // std::cerr << "  for arch " << gbl_archs[ia] << " ..." << std::endl;
         // we read default settings for architecture in front
-        std::string arch_cfg = prog_path + "data/cbc_" + gbl_archs[ia] + ".yaml";
+        std::string arch_cfg = prog_path + "../data/cbc_" + gbl_archs[ia] + ".yaml";
         if ( !cr_read_config(arch_cfg.c_str(), true, "config") )
         {
           msg_error("failed to read configuration ,%s'\n", arch_cfg.c_str());
