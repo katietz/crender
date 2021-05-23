@@ -45,8 +45,8 @@ Licenses used
 Jinja2Cpp is under Mozilla Public License Version 2.0.  For further information see Jinja2Cpp's sources.
 This sources were majorly extended by Kai Tietz by using the same license for its source.
 
-yaml-cpp is released under BSD-like license by Jesse Beder.
+yaml-cpp is released under MIT-like license by Jesse Beder.
 
-crender is released under BSD-like license. See LICENSE for more details.
+crender is released under MIT-like license. See LICENSE for more details.
 
 
