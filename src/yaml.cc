@@ -234,12 +234,15 @@ bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess, 
     {"py3k", cr_get_cfg_str("py3k", "0") == "1"},
     {"py2k", cr_get_cfg_str("py3k", "0") == "1"},
     {"build_platform", cr_get_cfg_str("target-platform", "win-64")},
+    {"target_platform", cr_get_cfg_str("target_platform", "win-64")},
+    {"ctng_target_platform", cr_get_cfg_str("target_platform", "win-64")},
     {"np", cr_get_cfg_str("np", "116")},
     {"pl", cr_get_cfg_str("pl", "5")},
     {"lua", cr_get_cfg_str("lua", "5")},
     {"luajit", cr_get_cfg_str("lua", "5")[0] == '2'},
     {"aarch64", cr_get_cfg_str("aarch64", "0") == "1"},
     {"ppcle64", cr_get_cfg_str("ppcle64", "0") == "1"},
+  // ctng_target_platform
   };
 
   params["compiler"] = jinja2::MakeCallable(expand_compiler,
@@ -528,8 +531,11 @@ void cr_set_cfg_preset(const char *py, const char *numpy)
   // Add environment based variables
   std::string platform = cr_get_cfg_str("platform", "win");
   if (platform == "win")
-    cr_set_cfg_var("PYTHON", "PYTHON");
+    cr_set_cfg_var("PYTHON", "python.exe");
   else
     cr_set_cfg_var("PYTHON", "${PYTHON}");
-
+  std::string v = cr_get_cfg_str("target_platform", "");
+  if (v == "" ) cr_set_cfg_var("target_platform", (platform + "-64").c_str());
+  v = cr_get_cfg_str("build_platform", "");
+  if (v == "" ) cr_set_cfg_var("build_platform", (platform + "-64").c_str());
 }
