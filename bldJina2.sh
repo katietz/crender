@@ -8,7 +8,7 @@ rm -rf bld
 mkdir bld
 cd bld
 
-cmake .. -DCMAKE_CXX_FLAGS="-Wno-parentheses" -DCMAKE_INSTALL_PREFIX=../../pref
+cmake .. -DCMAKE_CXX_FLAGS="-Wno-parentheses -Wno-deprecated-declarations" -DCMAKE_INSTALL_PREFIX=../../pref
 cmake --build . --target all
 cmake --build . --target install
 

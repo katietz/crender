@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cd Jinja2Cpp
-mkdir bld
+mkdir -p bld
 cd bld
 
 cmake --build . --target install
