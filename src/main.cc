@@ -96,7 +96,8 @@ static void show_usage(const char *fmt,...)
     std::cerr << "*** " << (const char *) &s[0] << " ***" << std::endl;
   }
 
-  std::cerr << "Usage of " << prog_name << ":" << std::endl << std::endl;
+  std::cerr << "Usage of " << prog_name << ":" << std::endl
+            << "  Version " CRENDER_VERSION << "  (c) 2021" << std::endl;
   std::cerr << "  " << prog_name << " [options] meta.yaml-files" << std::endl << std::endl;
   std::cerr << "  Options:" << std::endl
     << "    -a <arch>    : Add an addition architecture to render" << std::endl
@@ -113,6 +114,7 @@ static void show_usage(const char *fmt,...)
     << "    -i           : Output information yaml files" << std::endl
     << "    -I           : Like option '-i' but tries to append to existing information yaml files" << std::endl
     << "    -f           : Show each processed file as line" << std::endl
+    << "    -v           : Show version information" << std::endl
     << "    -V           : Enable verbose printing" << std::endl;
   ;
   std::cerr << "  Valid arch:";
@@ -244,6 +246,8 @@ static bool parse_args(int argc, char **argv)
                 no_output_file ^= true; break;
       case 'V':
                 jinja2::do_expr_debug = true; break;
+      case 'v':
+                fprintf(stderr, "version: %s\n", CRENDER_VERSION); break;
       case 'W':
                 jinja2::do_stmt_debug = true;
                 break;
