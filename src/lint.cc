@@ -14,6 +14,7 @@ static bool has_requires(const YAML::Node &pk, const char *dep, bool check_m2 = 
 static YAML::Node loop_seq(YAML::Node n);
 static bool has_compiler_dependency(const YAML::Node &nbase, bool is_output, const YAML::Node &pnbase);
 static void check_command_script_line(const char *s, const char *pkname, const char *pkver, const char *m);
+static bool has_output_sections(const YAML::Node &nbase);
 
 // external variables
 extern YAML::Node theConfig;
@@ -44,7 +45,7 @@ static void lint_requirements(const YAML::Node &req, const char *pkname, const c
 {
    if ( !req.IsDefined())
    {
-    if ( !is_output)
+    if ( !is_output && !has_output_sections(nbase))
       add_info_note(pkname, pkver, "No requirements section present");
     return;
    }
@@ -69,7 +70,7 @@ static void lint_requirements(const YAML::Node &req, const char *pkname, const c
   }
   else if (has_requires(nbase,"pip") || has_requires(nbase,"wheel") || has_requires(nbase,"setuptools"))
   {
-    if (!has_requires(nbase, "pip") && (!is_output || !has_requires(pnbase, "pip")))
+    if (!has_requires(nbase, "pip") && (!is_output  || !has_requires(pnbase, "pip")))
       add_info_note(pkname, pkver, "Missing pip package in requirements");
     if (!has_requires(nbase,"python") && (!is_output || !has_requires(pnbase, "python")))
       add_info_note(pkname, pkver, "Missing python package in requirements");
@@ -85,7 +86,7 @@ static void lint_build(const YAML::Node &build, const char *pkname, const char *
   if (!build.IsDefined())
   {
     if ( !is_output)
-      add_info_note(pkname, pkver, "No build section present");
+      add_info_note(pkname, pkver, !has_output_sections(pnbase) ? "No build section present" : "Build section should contain at least build-number");
     return;
   }
   if (build.size() == 0)
@@ -220,7 +221,7 @@ static void lint_about(const YAML::Node &about, const char *pkname, const char *
   if (!about.IsDefined())
   {
     if (!is_output || !pabout.IsDefined())
-      add_info_note(pkname, pkver, "No about section present");
+      add_info_note(pkname, pkver, is_output ? "No about section in output present" : "No about section present");
     return;
   }
   std::string msg;
@@ -264,8 +265,8 @@ static void lint_test(const YAML::Node &test, const char *pkname, const char *pk
   const YAML::Node &ptest = (is_output && pnbase.IsDefined() && pnbase["test"].IsDefined()) ? pnbase["test"] : test;
   if (!test.IsDefined())
   {
-    if (!is_output || !ptest.IsDefined())
-      add_info_note(pkname, pkver, "No test section present");
+    if ((!is_output && has_output_sections(nbase))|| !ptest.IsDefined())
+      add_info_note(pkname, pkver, is_output ? "No test section in output present" : "No test section present");
     return;
   }
   // requires
@@ -524,6 +525,13 @@ void check_for_package_version(const std::string &fname)
       }
     }
   }
+}
+
+static bool has_output_sections(const YAML::Node &nbase)
+{
+  if (!nbase.IsDefined())
+    return false;
+  return nbase["outputs"].IsDefined();
 }
 
 void info_outputfiles(const std::string &fname_prefix)
