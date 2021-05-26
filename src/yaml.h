@@ -4,6 +4,8 @@
 #include <string>
 #include "yaml-cpp/yaml.h"
 
+#define CRENDER_VERSION "0.1"
+
 bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess = true, bool do_jinja2 = true);
 
 void cr_dump_yaml(const YAML::Node &n);
