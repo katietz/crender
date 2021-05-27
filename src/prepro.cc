@@ -22,6 +22,8 @@
 #define TK_STRING 262
 #define TK_DIGIT 263
 #define TK_NAME  264
+#define TK_INT   0x200
+#define TK_FLOAT 0x201
 #define TK_FOPEN  '('
 #define TK_FCLOSE ')'
 #define TK_ERROR -2
@@ -29,6 +31,8 @@
 
 // forwarder ...
 static bool run_cond_1(const char *);
+static int tk_lex_func(const char *&c, std::string &tkn);
+
 static int cur_lineno_prepro = 1;
 
 // lexical routine to parse condition strings
@@ -109,6 +113,11 @@ static int tk_lex(const char *&c, std::string &tk)
 	   if ( tk == "and" ) return TK_ANDAND;
 	   if ( tk == "or") return TK_OROR;
 	   if ( tk == "not") return TK_NOT;
+     if (*c == '(')
+     {
+      if ( tk == "int") return TK_INT;
+      if ( tk == "float") return TK_FLOAT;
+     }
 	   return TK_NAME;
 	}
     break;
@@ -134,7 +143,7 @@ static int probe_compare(const char *&c, int &tk2, std::string &tkn2)
   int tk = tk_lex(c, tkn);
   if ( tk == TK_EQEQ || tk == TK_NOTEQ || tk == TK_G || tk == TK_L || tk == TK_LEQ || tk == TK_GEQ)
   {
-    tk2 = tk_lex(c, tkn2);
+    tk2 = tk_lex_func(c, tkn2);
     if ( tk2 == TK_STRING || tk2 == TK_DIGIT || tk2 == TK_NAME)
       return tk;
   }
@@ -184,6 +193,28 @@ static int eval_tok(const std::string &name, std::string &val)
 // forwarder ...
 static int eval_cond(const char *&c);
 
+// read token or function replace
+static int tk_lex_func(const char *&c, std::string &tkn)
+{
+  int tk = tk_lex(c, tkn);
+  if ( tk == TK_FLOAT || tk == TK_INT)
+  {
+    int tkf = tk;
+    std::string tkn2;
+    int tk2 = tk_lex(c, tkn2);
+    if ( tk2 != TK_FOPEN )
+      return -1;
+    tk = tk_lex_func(c, tkn);
+    if (tk < 0)
+      return -1;
+    tk2 = tk_lex(c, tkn2);
+    if ( tk2 != TK_FCLOSE )
+      return -1;
+    // TODO implement real conversion if (TK_INT)
+  }
+  return tk;
+}
+
 // evaluate an unary expression in condition string
 // Returns 0, 1, or a negative value on error
 static int eval_string(const char *&c)
@@ -192,7 +223,7 @@ static int eval_string(const char *&c)
   int svl = cur_lineno_prepro;
   std::string tkn;
 
-  int tk = tk_lex(c, tkn);
+  int tk = tk_lex_func(c, tkn);
   if ( tk == TK_NOT)
   {
     int r = eval_string(c);

@@ -186,6 +186,7 @@ std::string expand_ccache(const std::string &method)
   return "ccache";
 }
 
+
 bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess, bool do_jinja2)
 {
   std::string src;
@@ -214,16 +215,10 @@ bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess, 
     fcontent = psrc;
     return true;
   }
-  jinja2::Template tpl;
-  const auto& pp = tpl.Load(psrc);
-  if ( !pp.has_value() )
-  {
-    msg_error("after load %s\n", pp.error().ToString().c_str() );
-    return false;
-  }
 
   bool is_unix = cr_get_cfg_str("unix","0") == "1";
   bool is_win = cr_get_cfg_str("win","0") == "1";
+
   jinja2::ValuesMap params = {
     {"TrueValue", true },
     {"FalseValue", false},
@@ -261,10 +256,19 @@ bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess, 
       jinja2::ArgInfoT<bool>{ "exact", false, 0 });
   params["ccache"] = jinja2::MakeCallable(expand_ccache,
       jinja2::ArgInfo{ "method", false, "none" });
+  // base python conversion routines
   // os environ
   params["os.environ.get"] = jinja2::MakeCallable(expand_os_environ_get,
       jinja2::ArgInfo{ "name" },
       jinja2::ArgInfo{ "def", false, "" });
+
+  jinja2::Template tpl;
+  const auto& pp = tpl.Load(psrc, std::string(fname));
+  if ( !pp.has_value() )
+  {
+    msg_error("after load %s\n", pp.error().ToString().c_str() );
+    return false;
+  }
 
   try {
     fcontent = tpl.RenderAsString(params).value();

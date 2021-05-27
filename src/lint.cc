@@ -96,30 +96,67 @@ static void lint_build(const YAML::Node &build, const char *pkname, const char *
   }
   if (build["script"].IsDefined())
   {
-    std::string script = cr_get_config_str(build["script"], 0, "");
-    const char *s = script.c_str();
-    while (*s > 0 && *s <=0x20)
-        ++s;
-    if (*s == '"')
+    if (build["script"].IsSequence())
     {
-        ++s;
+      size_t sz = build["script"].size();
+      if (sz == 0)
+        add_info_note(pkname, pkver, "Build sections contains empty script");
+      for (size_t i = 0; i <sz; i++)
+      {
+        std::string script = cr_get_config_str(build["script"], i, "");
+        const char *s = script.c_str();
         while (*s > 0 && *s <=0x20)
             ++s;
-        if (*s == '"') ++s;
-    }
-    if (*s == '\'')
-    {
-        ++s;
-        while (*s > 0 && *s <=0x20)
+        if (*s == '"')
+        {
             ++s;
-        if (*s == '\'') ++s;
+            while (*s > 0 && *s <=0x20)
+                ++s;
+            if (*s == '"') ++s;
+        }
+        if (*s == '\'')
+        {
+            ++s;
+            while (*s > 0 && *s <=0x20)
+                ++s;
+            if (*s == '\'') ++s;
+        }
+        if (*s == 0)
+          add_info_note(pkname, pkver, "Build section contains an empty 'script' line");
+        else if (s[0] == '-')
+          add_info_note(pkname, pkver, "Build section contains 'script' line with implicit python invocation");
+        else
+          check_command_script_line(s, pkname, pkver, "In 'script' line in Build section ");
+
+      }
     }
-    if (*s == 0)
-      add_info_note(pkname, pkver, "Build section contains empty 'script'");
-    else if (s[0] == '-')
-       add_info_note(pkname, pkver, "Build section contains 'script' with implicit python invocation");
     else
-       check_command_script_line(s, pkname, pkver, "In 'script' in Build section ");
+    {
+      std::string script = cr_get_config_str(build["script"], 0, "");
+      const char *s = script.c_str();
+      while (*s > 0 && *s <=0x20)
+          ++s;
+      if (*s == '"')
+      {
+          ++s;
+          while (*s > 0 && *s <=0x20)
+              ++s;
+          if (*s == '"') ++s;
+      }
+      if (*s == '\'')
+      {
+          ++s;
+          while (*s > 0 && *s <=0x20)
+              ++s;
+          if (*s == '\'') ++s;
+      }
+      if (*s == 0)
+        add_info_note(pkname, pkver, "Build section contains empty 'script'");
+      else if (s[0] == '-')
+        add_info_note(pkname, pkver, "Build section contains 'script' with implicit python invocation");
+      else
+        check_command_script_line(s, pkname, pkver, "In 'script' in Build section ");
+    }
   }
   if (!build["number"].IsDefined() && !is_output)
     add_info_note(pkname, pkver, "Build section without build-number");
