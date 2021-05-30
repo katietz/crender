@@ -7,6 +7,7 @@
 #include <jinja2cpp/generic_list_iterator.h>
 #include "yaml.h"
 #include "prepro.h"
+#include "version.h"
 
 // forwarders ...
 static bool has_requires_pkg_in(const char *sname, const YAML::Node &pk, const char *dep, bool check_m2);
@@ -15,6 +16,8 @@ static YAML::Node loop_seq(YAML::Node n);
 static bool has_compiler_dependency(const YAML::Node &nbase, bool is_output, const YAML::Node &pnbase);
 static void check_command_script_line(const char *s, const char *pkname, const char *pkver, const char *m);
 static bool has_output_sections(const YAML::Node &nbase);
+static void lint_pkg_require(const char *pkname, const char *pkver, const YAML::Node &pk);
+void info_add_depends_on_kind_pkg(const char *pkname, const char *nver, const char *dep, const char *kind);
 
 // external variables
 extern YAML::Node theConfig;
@@ -24,11 +27,13 @@ static YAML::Node output1pkg;
 static YAML::Node output2pkg;
 static YAML::Node output3pkg;
 static YAML::Node output4pkg;
-static YAML::Node output5pkg;
+static YAML::Node output_dependson;
+static YAML::Node output_dependson_kind;
 static YAML::Node output_notes;
 static YAML::Node output_urls;
+static YAML::Node output_scriptenv;
 
-static void add_usedby(const YAML::Node &n, const char *pkname, const char *pkver)
+static void add_usedby(const YAML::Node &n, const char *pkname, const char *pkver, const char *kind)
 {
   if (!n.IsDefined())
      return;
@@ -38,6 +43,7 @@ static void add_usedby(const YAML::Node &n, const char *pkname, const char *pkve
      std::string dep = cr_get_config_str(n[i], 0, "<undef>");
      info_add_used_by_pkg(pkname, pkver, dep.c_str());
      info_add_depends_on_pkg(pkname, pkver, dep.c_str());
+     info_add_depends_on_kind_pkg(pkname,pkver, dep.c_str(), kind);
   }
 }
 
@@ -54,6 +60,15 @@ static void lint_requirements(const YAML::Node &req, const char *pkname, const c
     add_info_note(pkname, pkver, "Empty requirements section in output present");
     return;
   }
+  if (req["build"].IsDefined() && req["build"].size() == 0)
+    add_info_note(pkname, pkver, "Empty 'build'-section in requirements");
+  if (req["host"].IsDefined() && req["host"].size() == 0)
+    add_info_note(pkname, pkver, "Empty 'host'-section in requirements");
+  if (req["run"].IsDefined() && req["run"].size() == 0)
+    add_info_note(pkname, pkver, "Empty 'run'-section in requirements");
+  lint_pkg_require(pkname, pkver, req["build"]);
+  lint_pkg_require(pkname, pkver, req["host"]);
+  lint_pkg_require(pkname, pkver, req["run"]);
   if (!strcmp(pkname, "wheel") || !strcmp(pkname, "setuptools") || !strcmp(pkname, "pip"))
   {
     if (!has_requires(nbase,"python") && (!is_output || !has_requires(pnbase, "python")))
@@ -313,7 +328,8 @@ static void lint_test(const YAML::Node &test, const char *pkname, const char *pk
   if (ptest["requires"].IsDefined())
   {
     if (ptest["requires"].size() == 0 || !ptest["requires"].IsSequence())
-      add_info_note(pkname, pkver, "Test section contains empty 'requires'");
+      add_info_note(pkname, pkver, "In 'test'-section 'requires' is empty");
+    lint_pkg_require(pkname, pkver, ptest["requires"]);
     has_python = has_requires_pkg_in("requires", nbase, "python", false);
   }
   // see imports
@@ -473,21 +489,21 @@ void check_for_package_version(const std::string &fname)
     nn = loop_seq(theConfig["package"]["requirements"]["build"]);
     if (nn.IsDefined() && nn.size() > 0)
     {
-      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "build");
       theConfig["package"]["requirements"].remove("build");
       theConfig["package"]["requirements"]["build"] = nn;
     }
     nn = loop_seq(theConfig["package"]["requirements"]["host"]);
     if (nn.IsDefined() && nn.size() > 0)
     {
-      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "host");
       theConfig["package"]["requirements"].remove("host");
       theConfig["package"]["requirements"]["host"] = nn;
     }
     nn = loop_seq(theConfig["package"]["requirements"]["run"]);
     if (nn.IsDefined() && nn.size() > 0)
     {
-      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "run");
       theConfig["package"]["requirements"].remove("run");
       theConfig["package"]["requirements"]["run"] = nn;
     }
@@ -499,7 +515,7 @@ void check_for_package_version(const std::string &fname)
     nn = loop_seq(theConfig["package"]["test"]["requires"]);
     if (nn.IsDefined() && nn.size() > 0)
     {
-      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+      add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "test");
       theConfig["package"]["test"].remove("requires");
       theConfig["package"]["test"]["requires"] = nn;
     }
@@ -522,7 +538,7 @@ void check_for_package_version(const std::string &fname)
           nn = loop_seq(theConfig["package"]["outputs"][i]["requirements"]["build"]);
           if (nn.IsDefined() && nn.size() > 0)
           {
-            add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+            add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "build");
             theConfig["package"]["outputs"][i]["requirements"].remove("build");
             theConfig["package"]["outputs"][i]["requirements"]["build"] = nn;
           }
@@ -532,7 +548,7 @@ void check_for_package_version(const std::string &fname)
           nn = loop_seq(theConfig["package"]["outputs"][i]["requirements"]["host"]);
           if (nn.IsDefined() && nn.size() > 0)
           {
-            add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+            add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "host");
             theConfig["package"]["outputs"][i]["requirements"].remove("host");
             theConfig["package"]["outputs"][i]["requirements"]["host"] = nn;
           }
@@ -542,7 +558,7 @@ void check_for_package_version(const std::string &fname)
           nn = loop_seq(theConfig["package"]["outputs"][i]["requirements"]["run"]);
           if (nn.IsDefined() && nn.size() > 0)
           {
-            add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+            add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "run");
             theConfig["package"]["outputs"][i]["requirements"].remove("run");
             theConfig["package"]["outputs"][i]["requirements"]["run"] = nn;
           }
@@ -555,7 +571,7 @@ void check_for_package_version(const std::string &fname)
         nn = loop_seq(theConfig["package"]["outputs"][i]["test"]["requires"]);
         if (nn.IsDefined() && nn.size() > 0)
         {
-          add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str());
+          add_usedby(nn, pkgnamestr.c_str(), pkgversion.c_str(), "test");
           theConfig["package"]["outputs"][i]["test"].remove("requires");
           theConfig["package"]["outputs"][i]["test"]["requires"] = nn;
         }
@@ -579,9 +595,11 @@ void info_outputfiles(const std::string &fname_prefix)
     cr_output_yaml_to_file(output2pkg, "-");
     cr_output_yaml_to_file(output3pkg, "-");
     cr_output_yaml_to_file(output4pkg, "-");
-    cr_output_yaml_to_file(output5pkg, "-");
+    cr_output_yaml_to_file(output_dependson, "-");
+    cr_output_yaml_to_file(output_dependson_kind, "-");
     cr_output_yaml_to_file(output_notes, "-");
     cr_output_yaml_to_file(output_urls, "-");
+    cr_output_yaml_to_file(output_scriptenv, "-");
   }
   else
   {
@@ -589,10 +607,44 @@ void info_outputfiles(const std::string &fname_prefix)
     cr_output_yaml_to_file(output2pkg, (fname_prefix + "pv.yaml").c_str());
     cr_output_yaml_to_file(output3pkg, (fname_prefix + "pv2o.yaml").c_str());
     cr_output_yaml_to_file(output4pkg, (fname_prefix + "p_usedby.yaml").c_str());
-    cr_output_yaml_to_file(output5pkg, (fname_prefix + "p_dependson.yaml").c_str());
+    cr_output_yaml_to_file(output_dependson, (fname_prefix + "p_dependson.yaml").c_str());
+    cr_output_yaml_to_file(output_dependson_kind, (fname_prefix + "p_dependson_kind.yaml").c_str());
     cr_output_yaml_to_file(output_notes, (fname_prefix + "notes.yaml").c_str());
     cr_output_yaml_to_file(output_urls, (fname_prefix + "urls.yaml").c_str());
+    cr_output_yaml_to_file(output_scriptenv, (fname_prefix + "envs.yaml").c_str());
   }
+}
+
+// collects the information about each environment variable set by meta.yaml
+void info_add_output_envp(const char *pkname, const char *version, const char *env)
+{
+  if (pkname == NULL || *pkname == 0 || !env || *env)
+    return;
+  if (version == NULL || *version == 0)
+    version = "*";
+  const YAML::Node &n = output_scriptenv[pkname];
+  size_t nsz = 0;
+  if (n.IsDefined())
+  {
+    nsz = n.size();
+    for (size_t i = 0; i < nsz; i++)
+    {
+      std::string nstr = cr_get_config_str(n, i, "");
+      if (nstr == version)
+      {
+        const YAML::Node &nn = n[version];
+        size_t nz2 = nn.size();
+        for (size_t j = 0; j < 0; j++)
+        {
+          nstr = cr_get_config_str(nn, j, "");
+          if (nstr == env)
+            return;
+        }
+      }
+      output2pkg[pkname][version][nsz] = YAML::Node(env);
+    }
+  }
+  output2pkg[pkname][version][0] = YAML::Node(env);
 }
 
 // 1. outputs -> to package
@@ -704,6 +756,18 @@ void info_add_used_by_pkg(const char *pkname, const char *nver, const char *dep)
     output4pkg[dep][ver][nsz] = YAML::Node(pn.c_str());
 }
 
+static void lint_pkg_require(const char *pkname, const char *pkver, const YAML::Node &pk)
+{
+  if (!pk.IsDefined() || !pk.IsSequence() || pk.size() == 0)
+    return;
+  size_t sz = pk.size();
+  for (size_t i = 0; i < sz; i++)
+  {
+    std::string msg = cr_get_config_str(pk, i, "");
+    valdidate_pkg_version(pkname, pkver, msg);
+  }
+}
+
 static bool has_requires_pkg_in(const char *sname, const YAML::Node &pk, const char *dep, bool check_m2)
 {
   if (!pk.IsDefined()
@@ -779,6 +843,37 @@ static YAML::Node loop_seq(YAML::Node n)
 void info_add_pkg_2_url(const char *pkgname, const char *version, const char *url, const char *sha);
 
 // 5. package depends on run/host/build/test
+
+void info_add_depends_on_kind_pkg(const char *pkname, const char *nver, const char *dep, const char *kind)
+{
+  if (!dep || *dep == 0)
+    return;
+  
+  std::string pn = pkname;
+  if (nver && *nver != 0)
+  {
+    pn += " ";
+    pn += nver;
+  }
+  size_t nsz = 0;
+  const YAML::Node &n3 = output_dependson_kind[pn.c_str()];
+  if (n3.IsDefined())
+  {
+    const YAML::Node &n2 = output_dependson_kind[pn.c_str()][kind];
+    if (n2.IsDefined())
+    {
+      nsz = n2.size();
+      for (size_t i = 0; i < nsz; i++)
+      {
+        std::string nstr = cr_get_config_str(n2, i, "");
+        if (nstr == dep)
+          return; // we are done, element already there
+      }
+    }
+  }
+  output_dependson_kind[pn.c_str()][kind][nsz]=YAML::Node(dep);
+}
+
 void info_add_depends_on_pkg(const char *pkname, const char *nver, const char *dep)
 {
   if (!dep || *dep == 0)
@@ -790,7 +885,7 @@ void info_add_depends_on_pkg(const char *pkname, const char *nver, const char *d
     pn += nver;
   }
   size_t nsz = 0;
-  const YAML::Node &n2 = output5pkg[pn.c_str()];
+  const YAML::Node &n2 = output_dependson[pn.c_str()];
   if (n2.IsDefined())
   {
     nsz = n2.size();
@@ -801,7 +896,7 @@ void info_add_depends_on_pkg(const char *pkname, const char *nver, const char *d
         return; // we are done, element already there
     }
   }
-  output5pkg[pn.c_str()][nsz]=YAML::Node(dep);
+  output_dependson[pn.c_str()][nsz]=YAML::Node(dep);
 }
 
 // package version used by package
@@ -815,7 +910,8 @@ void info_outputfiles_read(const std::string &fname_prefix)
   output2pkg = cr_read_yaml((fname_prefix + "pv.yaml").c_str());
   output3pkg = cr_read_yaml((fname_prefix + "pv2o.yaml").c_str());
   output4pkg = cr_read_yaml((fname_prefix + "p_usedby.yaml").c_str());
-  output5pkg = cr_read_yaml((fname_prefix + "p_dependson.yaml").c_str());
+  output_dependson = cr_read_yaml((fname_prefix + "p_dependson.yaml").c_str());
+  output_dependson_kind = cr_read_yaml((fname_prefix + "p_dependson_kind.yaml").c_str());
   output_notes = cr_read_yaml((fname_prefix + "notes.yaml").c_str());
   output_urls = cr_read_yaml((fname_prefix + "urls.yaml").c_str());
 }

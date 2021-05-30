@@ -10,6 +10,7 @@
 
 // forwarder ...
 static std::string cr_get_config_str1(char *, const YAML::Node &, int idx, const char*);
+std::string cr_get_cfgcbc_str(const char *name, const char *def);
 
 // external variables
 extern bool ignore_skip;
@@ -231,13 +232,15 @@ bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess, 
     {"build_platform", cr_get_cfg_str("target-platform", "win-64")},
     {"target_platform", cr_get_cfg_str("target_platform", "win-64")},
     {"ctng_target_platform", cr_get_cfg_str("target_platform", "win-64")},
+    {"ctng_gcc", cr_get_cfg_str("c_compiler_version", "7.3.0")},
+    {"ctng_binutils", cr_get_cfg_str("c_compiler_version", "2.35")},
+    {"numpy", cr_get_cfgcbc_str("numpy", "1.16")},
     {"np", cr_get_cfg_str("np", "116")},
     {"pl", cr_get_cfg_str("pl", "5")},
     {"lua", cr_get_cfg_str("lua", "5")},
     {"luajit", cr_get_cfg_str("lua", "5")[0] == '2'},
     {"aarch64", cr_get_cfg_str("aarch64", "0") == "1"},
     {"ppcle64", cr_get_cfg_str("ppcle64", "0") == "1"},
-  // ctng_target_platform
   };
 
   params["compiler"] = jinja2::MakeCallable(expand_compiler,
@@ -379,6 +382,14 @@ std::string cr_get_config_str(const char *name, int idx, const char *def)
   char s[strlen(name)+1];
   strcpy(s, name);
   return cr_get_config_str1(&s[0], theConfig, idx, def);
+}
+
+std::string cr_get_cfgcbc_str(const char *name, const char *def)
+{
+  std::string r = cr_get_cbc_str(name, "");
+  if (r.empty())
+    r = cr_get_cfg_str(name, def);
+  return r;
 }
 
 std::string cr_get_cfg_str(const char *name, const char *def)
