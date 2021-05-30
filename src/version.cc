@@ -14,7 +14,7 @@ static int read_pkgver_spaces(const char *&h)
     return had_space;
 }
 
-static std::string read_pgk_name(const char *&h)
+std::string read_pgk_name(const char *&h)
 {
   std::string r = "";
   while ((*h >='a' && *h <= 'z')

@@ -720,12 +720,11 @@ void info_add_used_by_pkg(const char *pkname, const char *nver, const char *dep)
 {
   if (!dep || *dep == 0 || !pkname || *pkname == 0)
     return;
-  char *h = (char *) alloca(strlen(dep)+1);
-  strcpy(h, dep);
-  char *hp = strchr(h, ' ');
-  if ( hp) { *hp++ = 0; }
+  const char *hp = dep;
+  std::string np = read_pgk_name(hp);
+  while (*hp != 0 && *hp == ' ') ++hp;
   const char *ver = hp;
-  dep = h;
+  dep = np.c_str();
   if (ver == NULL || *ver == 0)
     ver = "*";
   std::string pn = pkname;
@@ -824,8 +823,10 @@ static YAML::Node loop_seq(YAML::Node n)
   for (size_t i = 0; i <nmax; i++)
   {
     std::string strr = cr_get_config_str(n, i, "");
-
-    if (strchr(strr.c_str(), ' ') == NULL)
+    const char *h = strr.c_str();
+    std::string pn = read_pgk_name(h);
+    while (*h == ' ') ++h;
+    if (*h == 0)
     {
       std::string cbc_val = cr_get_cbc_str(strr.c_str(), "");
       if (!cbc_val.empty())

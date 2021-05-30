@@ -7,6 +7,7 @@
 #include <jinja2cpp/generic_list_iterator.h>
 #include "yaml.h"
 #include "prepro.h"
+#include "version.h"
 
 // forwarder ...
 static std::string cr_get_config_str1(char *, const YAML::Node &, int idx, const char*);
@@ -133,22 +134,13 @@ std::string expand_cdt(const std::string &package_name)
   if (package_name.length() < 1)
     return std::string("illegal-cdt");
   const char *n = package_name.c_str();
-  const char *np = strchr(n, ' ');
   std::string ver, name;
-  name = package_name;
-  if ( np != NULL )
+  name = read_pgk_name(n);
+  while (*n == ' ') n++;
+  if (*n != 0)
   {
-    while (*np == ' ') np++;
-    if (*np == 0 )
-      np = NULL;
-  }
-  if ( np != NULL )
-  {
-    ver = "  ";
-    ver += np;
-    np--;
-    while (np > n && np[0] == ' ' && np[-1] == ' ') --np;
-    name = package_name.substr(0, (size_t) (np - n));
+    ver = " ";
+    ver += n;
   }
 
   std::string rslt = name + "-" + cdt_name + "-" + cdt_arch + ver;
