@@ -11,6 +11,7 @@
 
 // forwarder ...
 static std::string cr_get_config_str1(char *, const YAML::Node &, int idx, const char*);
+static void add_cbc_values2jinj2(jinja2::ValuesMap &params);
 std::string cr_get_cfgcbc_str(const char *name, const char *def);
 
 // external variables
@@ -213,8 +214,6 @@ bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess, 
   bool is_win = cr_get_cfg_str("win","0") == "1";
 
   jinja2::ValuesMap params = {
-    {"TrueValue", true },
-    {"FalseValue", false},
     {"unix", is_unix},
     {"win",  is_win},
     {"PYTHON", cr_get_cfg_str("PYTHON", is_win ? "%PYTHON%" : "${PYTHON}")},
@@ -231,9 +230,11 @@ bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess, 
     {"pl", cr_get_cfg_str("pl", "5")},
     {"lua", cr_get_cfg_str("lua", "5")},
     {"luajit", cr_get_cfg_str("lua", "5")[0] == '2'},
+    {"linux64", cr_get_cfg_str("linux-64", "0") == "1"},
     {"aarch64", cr_get_cfg_str("aarch64", "0") == "1"},
     {"ppcle64", cr_get_cfg_str("ppcle64", "0") == "1"},
   };
+  add_cbc_values2jinj2(params);
 
   params["compiler"] = jinja2::MakeCallable(expand_compiler,
       jinja2::ArgInfo{ "lang" });
@@ -506,6 +507,24 @@ void yaml_set_cbc_python_as(const char *py)
   yaml_set_cbc_x_as("python", py);
 }
 
+static void add_cbc_values2jinj2(jinja2::ValuesMap &params)
+{
+  const YAML::Node &x = theConfig["cbc"];
+  if (!x.IsDefined() || !x.IsMap() || x.size() == 0)
+    return;
+  YAML::Node::const_iterator it = x.begin();
+  for (size_t i = 0; i < x.size(); i++, it++)
+  {
+    std::string fi = cr_get_config_str(it->first, 0, "");
+    std::string cfg = cr_get_cfg_str(fi.c_str(), "");
+    const YAML::Node &xr = it->second;
+    if (cfg.empty())
+      cfg = cr_get_config_str(xr, 0, "");
+    if (!cfg.empty())
+      params[fi.c_str()] = cfg.c_str();
+  }
+}
+
 // set the temporary default values in data/cbc
 void cr_set_cfg_preset(const char *py, const char *numpy)
 {
@@ -524,9 +543,9 @@ void cr_set_cfg_preset(const char *py, const char *numpy)
   cr_set_cfg_var("py36", (vpy == 36) ? "1" : "0");
   if (!numpy || *numpy == 0)
   {
-//    vnp = cr_cbc_get()
-    numpy = "1.16";
+    vnp = cr_get_cbc_str("numpy", "1.16");
   }
+  cr_set_cfg_var("nunpy", numpy);
   cr_set_cfg_var("np", numpy);
   cr_set_cfg_var("pl", "5.26");
   const char *lua = "5"; // see cb in variants.py

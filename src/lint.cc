@@ -17,7 +17,6 @@ static bool has_compiler_dependency(const YAML::Node &nbase, bool is_output, con
 static void check_command_script_line(const char *s, const char *pkname, const char *pkver, const char *m);
 static bool has_output_sections(const YAML::Node &nbase);
 static void lint_pkg_require(const char *pkname, const char *pkver, const YAML::Node &pk);
-void info_add_depends_on_kind_pkg(const char *pkname, const char *nver, const char *dep, const char *kind);
 
 // external variables
 extern YAML::Node theConfig;
@@ -464,20 +463,26 @@ void check_for_package_version(const std::string &fname)
   lint_requirements(n["requirements"], pkgnamestr.c_str(), pkgversion.c_str(), n, false, n);
   lint_test(n["test"], pkgnamestr.c_str(), pkgversion.c_str(), n, false, n);
 
+  // check about section
+  lint_about(n["about"], pkgnamestr.c_str(), pkgversion.c_str(), n, false, n);
+
   if (n["outputs"].IsDefined() && n["outputs"].size() > 0)
   {
     size_t sz = n["outputs"].size();
     for (size_t i = 0; i < sz; i++)
     {
       const YAML::Node no = n["outputs"][i];
+      std::string npkgnamestr = cr_get_config_str(no["name"], 0, fname.c_str());
+      info_add_pkg_version(npkgnamestr.c_str(), pkgversion.c_str());
+      info_add_output_2_pkg(npkgnamestr.c_str(), pkgnamestr.c_str());
+      info_add_pkg_2_output(pkgnamestr.c_str(), pkgversion.c_str(), npkgnamestr.c_str());
+
       lint_build(no["build"], pkgnamestr.c_str(), pkgversion.c_str(), no, true, n);
       lint_requirements(no["requirements"], pkgnamestr.c_str(), pkgversion.c_str(), no, true, n);
       lint_test(no["test"], pkgnamestr.c_str(), pkgversion.c_str(), no, true, n);
       lint_about(no["about"], pkgnamestr.c_str(), pkgversion.c_str(), no, true, n);
     }
   }
-  // check about section
-  lint_about(n["about"], pkgnamestr.c_str(), pkgversion.c_str(), n, false, n);
 
   info_add_pkg_version(pkgnamestr.c_str(), pkgversion.c_str());
   info_add_output_2_pkg(pkgnamestr.c_str(), pkgnamestr.c_str());
@@ -529,6 +534,8 @@ void check_for_package_version(const std::string &fname)
       std::string nstr = cr_get_config_str(opts[i]["name"], 0, "<unspecified>");
       info_add_output_2_pkg(nstr.c_str(), pkgnamestr.c_str());
       info_add_pkg_2_output(pkgnamestr.c_str(), pkgversion.c_str(), nstr.c_str());
+
+      info_add_depends_on_kind_pkg(pkgnamestr.c_str(), pkgversion.c_str(), (nstr + " " + pkgversion).c_str(), "output");
       const YAML::Node &r1 = opts[i]["requirements"];
       if (r1.IsDefined())
       {
@@ -578,6 +585,8 @@ void check_for_package_version(const std::string &fname)
       }
     }
   }
+  else
+    info_add_depends_on_kind_pkg(pkgnamestr.c_str(), pkgversion.c_str(), (pkgnamestr + " " + pkgversion).c_str(), "output");
 }
 
 static bool has_output_sections(const YAML::Node &nbase)

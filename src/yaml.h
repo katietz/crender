@@ -37,6 +37,7 @@ void info_add_pkg_2_output(const char *pkgname, const char *version, const char 
 void info_add_used_by_pkg(const char *pkname, const char *ver, const char *dep);
 void info_add_pkg_version(const char *pkgname, const char *version);
 void info_add_depends_on_pkg(const char *pkname, const char *nver, const char *dep);
+void info_add_depends_on_kind_pkg(const char *pkname, const char *nver, const char *dep, const char *kind);
 void add_info_note(const char *pkg, const char *ver, const char *note);
 void add_info_url(const char *url, const char *url_kind, const char *pkg, const char *ver, const char *crc_kind, const char *crc);
 
