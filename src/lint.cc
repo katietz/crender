@@ -772,7 +772,10 @@ static void lint_pkg_require(const char *pkname, const char *pkver, const YAML::
   for (size_t i = 0; i < sz; i++)
   {
     std::string msg = cr_get_config_str(pk, i, "");
-    valdidate_pkg_version(pkname, pkver, msg);
+    if (!msg.empty())
+    {
+      valdidate_pkg_version(pkname, pkver, msg);
+    }
   }
 }
 

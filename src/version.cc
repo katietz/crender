@@ -109,6 +109,8 @@ static bool analyze_pkg_version(const char *pkg, const char *pkver, const std::s
         add_info_note(pkg, pkver, (x + ": no package name provided").c_str());
         return false;
     }
+    bool is_python = name == "pthon";
+
     int had_space = read_pkgver_spaces(h);
 
     if (*h == 0 || *h == '[')
@@ -121,6 +123,8 @@ static bool analyze_pkg_version(const char *pkg, const char *pkver, const std::s
       add_info_note(pkg, pkver, (x + ": missing space between package and version").c_str());
     // read the version string
     ver = read_version_string(pkg, pkver, h, x);
+    if (!ver.empty() && is_python)
+      add_info_note(pkg, pkver, (x + ": please check if 'python' needs a version specifier").c_str());
     bool ret = true;
     if ( had_space > 1 && !ver.empty())
       add_info_note(pkg, pkver, (x + ": too much spaces between package and version").c_str());
