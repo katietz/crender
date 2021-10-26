@@ -22,7 +22,7 @@ adjustments required for Windows are pretty straight-forward, and just a few adj
 1. Build `Jinja2Cpp` by executing the `bldJinja2Cpp.sh` script (or run its cmake manually).
 Note: Test test-suite is not adjusted, so don't wonder if it fails right now.
 ```
-$ ./bldJina2.sh 
+$ ./bldJinja2Cpp.sh 
 ```
 
 2. Build `yaml-cpp` by executing the `bldYaml-cpp.sh` script.
