@@ -13,38 +13,33 @@ This is a small tool intended to do linting, pre-rendering, and analysis of cond
 It supports some jinja2 features (be aware it doesn't support full python-language feature)
 It outputs files in yaml format.
 
-Building / Installing
----------------------
+Acquiring
+---------
 
-Right now build scripts are only available for Unix-like operating systems. Nevertheless the
-adjustments required for Windows are pretty straight-forward, and just a few adjustments might be necessary for it.
+Assuming a checkout from git, ensure submodules are updated:
+`git submodule update --init`
 
-1. Build `Jinja2Cpp` by executing the `bldJinja2Cpp.sh` script (or run its cmake manually).
-Note: Test test-suite is not adjusted, so don't wonder if it fails right now.
-```
-$ ./bldJinja2Cpp.sh 
-```
+Building
+--------
 
-2. Build `yaml-cpp` by executing the `bldYaml-cpp.sh` script.
-```
-$ ./bldYaml-cpp.sh 
-```
+Just use cmake as you normally would. For example:
 
-3. Build `crender` itself by executing the `bld.sh` script.
-```
-$ ./bld.sh
+```sh
+mkdir Build && \
+cd Build && \
+cmake .. -G"Ninja" -DCMAKE_BUILD_TYPE=Release && \
+ninja
 ```
 
-4. Confirm that `crender` is working.
-```
-$ ./bin/crender --help
-```
+Note that Windows isn't yet completely supported, though it's probably a trivial change.
 
-5. After building you will find 2 new directories in `crender`'s git root directory.
-    - `pref/`: Contains all binaries created by `Jinja2Cpp` and `yaml-cpp`. 
-    - `bin/`: Contains the created `crender` binary.
+Installing
+----------
 
-    The `crender` binary assumes there is a `data/` directory at the same level as the `bin/` directory. So if you move `crender` somewhere else, don't forget to also move the `data/` directory and its content accordingly.
+The `crender` binary assumes there is a `data/` directory either
+colocated with the execuable or at some level above it. If you move
+`crender`, don't forget to also move the `data/` directory and its
+content accordingly.
 
 Usage
 -----
@@ -118,5 +113,3 @@ This sources were majorly extended by Kai Tietz by using the same license for it
 yaml-cpp is released under MIT-like license by Jesse Beder.
 
 crender is released under MIT-like license. See LICENSE for more details.
-
-
