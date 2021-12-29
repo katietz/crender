@@ -98,7 +98,7 @@ static int tk_lex(const char *&c, std::string &tk)
       if (c[-1] >= '0' && c[-1] <= '9')
       {
         while (*c >= '0' && *c <= '9') tk+=*c++;
-        if (*c != '-' && *c != '_' && *c != '$' && !(*c >= 'a' && *c <= 'z') && !(*c >='A' && *c<='Z') || *c == '.')
+        if ((*c != '-' && *c != '_' && *c != '$' && !(*c >= 'a' && *c <= 'z') && !(*c >='A' && *c<='Z')) || *c == '.')
           return TK_DIGIT;
         // fall through
       }
@@ -199,7 +199,7 @@ static int tk_lex_func(const char *&c, std::string &tkn)
   int tk = tk_lex(c, tkn);
   if ( tk == TK_FLOAT || tk == TK_INT)
   {
-    int tkf = tk;
+    //int tkf = tk;
     std::string tkn2;
     int tk2 = tk_lex(c, tkn2);
     if ( tk2 != TK_FOPEN )

@@ -38,17 +38,42 @@ target_include_directories(${target_name} PRIVATE
   ${CMAKE_SOURCE_DIR}/src
   )
 
-target_include_directories(${target_name} PRIVATE
-  ${CMAKE_SOURCE_DIR}/pref/include
+target_include_directories(${target_name} SYSTEM PRIVATE
+  ${CMAKE_SOURCE_DIR}/Jinja2Cpp/include
+  ${CMAKE_SOURCE_DIR}/yaml-cpp/include
   )
 
-target_link_directories(${target_name} PRIVATE  # maybe this should be public?
-  #${CMAKE_SOURCE_DIR}/pref/lib
-  #${CMAKE_SOURCE_DIR}/pref/lib/static
-  )
+#target_link_directories(${target_name} PRIVATE  # maybe this should be public?
+#  )
 
 target_link_libraries(${target_name} PRIVATE # maybe this should be public?
   jinja2cpp
   yaml-cpp
   pthread
 )
+
+if( APPLE OR UNIX OR MINGW )
+  target_compile_options(${target_name} PRIVATE
+    -Wall
+    -Wextra
+    -Werror
+    -Wfloat-equal
+    -Wshadow
+#    -Wduplicated-branches
+    -Wctor-dtor-privacy
+    -Wnon-virtual-dtor
+    -Wsuggest-override
+    -Wredundant-decls
+#    -Wlogical-op
+    -Wold-style-cast
+    )
+
+elseif(MSVC)
+  target_compile_options(${target_name} PRIVATE
+    /W4
+    /WX
+    )
+
+else()
+  message(FATAL_ERROR "Can't set compile options")
+endif()

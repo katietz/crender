@@ -642,7 +642,7 @@ void info_add_output_envp(const char *pkname, const char *version, const char *e
       if (nstr == version)
       {
         const YAML::Node &nn = n[version];
-        size_t nz2 = nn.size();
+        //size_t nz2 = nn.size();
         for (size_t j = 0; j < 0; j++)
         {
           nstr = cr_get_config_str(nn, j, "");
@@ -789,7 +789,7 @@ static bool has_requires_pkg_in(const char *sname, const YAML::Node &pk, const c
   if (!n.IsSequence())
      return false;
   size_t sz = n.size();
-  size_t l = strlen(dep);
+  //size_t l = strlen(dep);
   for (size_t j = 0; j < sz; j++)
   {
     std::string msg = cr_get_config_str(n, j, "");
@@ -861,7 +861,7 @@ void info_add_depends_on_kind_pkg(const char *pkname, const char *nver, const ch
 {
   if (!dep || *dep == 0)
     return;
-  
+
   std::string pn = pkname;
   if (nver && *nver != 0)
   {

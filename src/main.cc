@@ -102,7 +102,7 @@ std::filesystem::path get_executable_path() {
   return rv;
 }
 
-void set_prog_vars(const char *pr) {
+void set_prog_vars() {
 
   const auto exe_path = get_executable_path();
   if(exe_path.empty()) {
@@ -145,7 +145,7 @@ static void show_usage(const char *fmt,...)
   {
     char s[1024];
     vsprintf(s, fmt, argp);
-    std::cerr << "*** " << (const char *) &s[0] << " ***" << std::endl;
+    std::cerr << "*** " << reinterpret_cast<const char *>(&s[0]) << " ***" << std::endl;
   }
 
   std::cerr << "Usage of " << prog_name << ":" << std::endl
@@ -326,7 +326,7 @@ static std::string get_file_at_base_of_file(const char *fname, const char *nfnam
 int main(int argc, char **argv)
 {
   // set initial prog_name and prog_path variables
-  set_prog_vars(argv[0]);
+  set_prog_vars();
 
   // scan arguments
   if (! parse_args(argc-1, &argv[1]) )
@@ -548,4 +548,3 @@ extern "C"
     va_end(argp);
   }
 };
-
