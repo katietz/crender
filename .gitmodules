@@ -1,7 +1,7 @@
 [submodule "Jinja2Cpp"]
 	path = Jinja2Cpp
-	url = ../Jinja2Cpp
+	url = ../../katietz/Jinja2Cpp
 [submodule "yaml-cpp"]
 	path = yaml-cpp
-	url = ../yaml-cpp
+	url = ../../katietz/yaml-cpp
 	branch = master
