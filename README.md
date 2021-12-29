@@ -45,11 +45,10 @@ Usage
 -----
 
 Example (querying all of the feedstocks for `linux-aarch64`):
+```sh
+./bin/crender -a linux-aarch64 -o ./output_linux-aarch64 -i -S -p 3.8 ../aggregate/*-feedstock
 ```
-    $ ./bin/crender -a linux-aarch64 -o ./output_linux-aarch64 -i -S -p 3.8 ../aggregate/*-feedstock
-```
-NB1: You will ned to make sure the output directory (`-o`) exists before running the command.
-NB2: You can specify multiple python versions using the `-p` parameter, and multiple architectures/subdirs with the `-a` parameter.
+NB1: You can specify multiple python versions using the `-p` parameter, and multiple architectures/subdirs with the `-a` parameter.
 
 Outputs
 -------
