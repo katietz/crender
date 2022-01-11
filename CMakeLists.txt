@@ -29,7 +29,7 @@ add_subdirectory(yaml-cpp)
 
 # Not everyone considers GLOBing good form in a mature project.
 file(GLOB_RECURSE src_cpp src/*.cpp src/*.cc)
-file(GLOB_RECURSE src_src/*.h)
+file(GLOB_RECURSE src_h src/*.h)
 
 add_executable(${target_name} ${src_cpp} ${src_h} )
 set_property(TARGET ${target_name} PROPERTY CXX_STANDARD 17)
