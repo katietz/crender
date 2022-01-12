@@ -20,6 +20,11 @@
 # include <mach-o/dyld.h>
 #endif
 
+#if defined(__linux__)
+# include <linux/limits.h>
+#endif
+
+
 // externals from Jinja2 debugging
 namespace jinja2 {
   extern bool do_expr_debug;
