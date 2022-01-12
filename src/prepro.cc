@@ -98,7 +98,7 @@ static int tk_lex(const char *&c, std::string &tk)
       if (c[-1] >= '0' && c[-1] <= '9')
       {
         while (*c >= '0' && *c <= '9') tk+=*c++;
-        if (*c != '-' && *c != '_' && *c != '$' && !(*c >= 'a' && *c <= 'z') && !(*c >='A' && *c<='Z') || *c == '.')
+        if ((*c != '-' && *c != '_' && *c != '$' && !(*c >= 'a' && *c <= 'z') && !(*c >='A' && *c<='Z')) || *c == '.')
           return TK_DIGIT;
         // fall through
       }
@@ -199,7 +199,7 @@ static int tk_lex_func(const char *&c, std::string &tkn)
   int tk = tk_lex(c, tkn);
   if ( tk == TK_FLOAT || tk == TK_INT)
   {
-    int tkf = tk;
+    //int tkf = tk;
     std::string tkn2;
     int tk2 = tk_lex(c, tkn2);
     if ( tk2 != TK_FOPEN )
@@ -436,7 +436,7 @@ int preprocess_lines(const std::string &src, std::string &dst)
   std::string cmt = "";
   std::string lnt = "";
   char quotech = 0;
-  int string_start_at = 0;
+  //int string_start_at = 0;
 
   while (*s != 0)
   {
@@ -456,7 +456,7 @@ int preprocess_lines(const std::string &src, std::string &dst)
       // if we see a quote sign, check if we need to toggle state
       if ((*s == '"' || *s == '\'') && (quotech == 0 || quotech == *s))
          quotech ^= *s;
-      if (quotech != 0) string_start_at = cur_lineno_prepro;
+      //if (quotech != 0) string_start_at = cur_lineno_prepro;
       lnt += *s++;
       continue;
     }

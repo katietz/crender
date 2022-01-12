@@ -4,7 +4,7 @@
 #include <string>
 #include "yaml-cpp/yaml.h"
 
-#define CRENDER_VERSION "0.1"
+#define CRENDER_VERSION "0.2"
 
 bool cr_read_file(const char *fname, std::string &fcontent, bool do_preprocess = true, bool do_jinja2 = true);
 
@@ -42,4 +42,3 @@ void add_info_note(const char *pkg, const char *ver, const char *note);
 void add_info_url(const char *url, const char *url_kind, const char *pkg, const char *ver, const char *crc_kind, const char *crc);
 
 #endif
-

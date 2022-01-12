@@ -174,7 +174,7 @@ std::string expand_compiler(const std::string &lang)
   return expand_compiler_int(lang.c_str(), true);
 }
 
-std::string expand_ccache(const std::string &method)
+std::string expand_ccache(const std::string& )//method)
 {
   // cr_set_cfg_str(ccache_method", method);
   return "ccache";
@@ -394,7 +394,7 @@ std::string cr_get_cfg_str(const char *name, const char *def)
 
 std::string cr_get_cbc_str(const char *name, const char *def)
 {
-  char *s = (char*) alloca(strlen(name)+1);
+  char *s = reinterpret_cast<char*>( alloca(strlen(name)+1) );
   strcpy(s, name);
   return cr_get_config_str1(&s[0], theConfig["cbc"], 0, def);
 }

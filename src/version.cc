@@ -21,6 +21,14 @@
 #define VCK_NEQZ 10
 #define VCK_ERROR -1
 
+namespace sb {
+
+template <typename... Ts>
+inline void ignore(const Ts&...) {}
+
+}
+
+
 static int read_pkgver_spaces(const char *&h)
 {
     int had_space = 0;
@@ -54,7 +62,7 @@ static std::string read_version(const char *&h)
     std::string r = "";
     while (1) {
       if (*h == '*') r += *h++;
-      else if(*h >='0' && *h <= '9' || (*h >= 'a' && *h <= 'z'))
+      else if((*h >='0' && *h <= '9') || (*h >= 'a' && *h <= 'z'))
       {
           while((*h >='0' && *h <= '9') || (*h >= 'a' && *h <= 'z') || (*h >= 'A' && *h <= 'Z') || *h == '_')
             r+= *h++;
@@ -222,6 +230,8 @@ static int cmp_eq_version(const char *s, const char *r, bool extend_zero)
   vec_ver_t left, right;
   bool lok = split_version(left, s);
   bool rok = split_version(right, r);
+  sb::ignore(lok,rok);
+
   size_t i = 0;
   while (i < left.size() && i < right.size())
   {
@@ -269,6 +279,7 @@ static int cmp_eq_version(const char *s, const char *r, bool extend_zero)
   return 0;
 }
 
+/*
 static int cmp_eq_version2(const char *s, const char *r, bool extend_zero)
 {
   bool matched_first = false;
@@ -286,7 +297,7 @@ static int cmp_eq_version2(const char *s, const char *r, bool extend_zero)
     return 0;
   if (!matched_first)
     return (*s - *r);
-  // 3.9.2 is equal to 3.9 
+  // 3.9.2 is equal to 3.9
   if (*r == 0 && (*s == 0 || *s == '.' || s[-1] == '.'))
     return 0;
   // version 3.9 is equal to 3.9.2
@@ -301,6 +312,7 @@ static int cmp_eq_version2(const char *s, const char *r, bool extend_zero)
   }
   return *s - *r;
 }
+*/
 
 static bool match_version(const char *cmp, const char *l, const char *r)
 {
@@ -362,7 +374,7 @@ std::string modify_version_by_one(const std::string &x, bool add)
   const char *ldot = strrchr(h, '.');
   if (!ldot)
   {
-    int a = atoi(h) + add ? 1 : -1;
+    int a = atoi(h) + (add ? 1 : -1);
     char s[256];
     sprintf(s, "%d",a);
     return std::string(s);
@@ -370,7 +382,7 @@ std::string modify_version_by_one(const std::string &x, bool add)
   std::string r = "";
   while (h < ldot) r+=*h++;
   {
-    int a = atoi(h) + add ? 1 : -1;
+    int a = atoi(h) + (add ? 1 : -1);
     char s[256];
     sprintf(s, "%d",a);
     r += s;
