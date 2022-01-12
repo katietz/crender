@@ -436,7 +436,7 @@ int preprocess_lines(const std::string &src, std::string &dst)
   std::string cmt = "";
   std::string lnt = "";
   char quotech = 0;
-  int string_start_at = 0;
+  //int string_start_at = 0;
 
   while (*s != 0)
   {
@@ -456,7 +456,7 @@ int preprocess_lines(const std::string &src, std::string &dst)
       // if we see a quote sign, check if we need to toggle state
       if ((*s == '"' || *s == '\'') && (quotech == 0 || quotech == *s))
          quotech ^= *s;
-      if (quotech != 0) string_start_at = cur_lineno_prepro;
+      //if (quotech != 0) string_start_at = cur_lineno_prepro;
       lnt += *s++;
       continue;
     }
