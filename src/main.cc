@@ -118,7 +118,12 @@ void set_prog_vars() {
   // Find and set data_path according to executable location.
   std::error_code sec;
   for(auto i = exe_path.parent_path(); !i.empty(); i = i.parent_path()) {
-    auto test_path = i/"data";
+    auto test_path = i/"crender-data";
+    if(std::filesystem::exists(test_path,sec)) {
+      data_path = test_path;
+      return;
+    }
+    test_path = i/"data";
     if(std::filesystem::exists(test_path,sec)) {
       data_path = test_path;
       return;

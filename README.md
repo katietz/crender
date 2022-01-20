@@ -13,12 +13,6 @@ This is a small tool intended to do linting, pre-rendering, and analysis of cond
 It supports some jinja2 features (be aware it doesn't support full python-language feature)
 It outputs files in yaml format.
 
-Acquiring
----------
-
-Assuming a checkout from git, ensure submodules are updated:
-`git submodule update --init`
-
 Building
 --------
 

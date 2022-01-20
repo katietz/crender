@@ -4,33 +4,25 @@ set(target_name crender)
 project("${target_name}")
 
 # update submodules
+find_package(Git REQUIRED)
+function(add_submodule submodule)
+  execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init ${submodule} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  add_subdirectory(${submodule})
+endfunction()
+
 
 # jinja2cpp
-add_subdirectory(Jinja2Cpp)
+add_submodule(Jinja2Cpp)
 
 # yaml-cpp
-add_subdirectory(yaml-cpp)
-
-
-# Possibly set some flags
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing" )
-#set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-
-# Boost!
-#find_package( Boost REQUIRED date_time thread system chrono)
-#include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-
-#if( NOT WIN32 AND NATIVE_SIZE EQUAL 64 )
-#  set( Boost_LIBRARIES ${Boost_LIBRARIES} rt)
-#endif()
-
+add_submodule(yaml-cpp)
 
 
 # Not everyone considers GLOBing good form in a mature project.
 file(GLOB_RECURSE src_cpp src/*.cpp src/*.cc)
 file(GLOB_RECURSE src_h src/*.h)
 
+# Add the executable here and use C++17.
 add_executable(${target_name} ${src_cpp} ${src_h} )
 set_property(TARGET ${target_name} PROPERTY CXX_STANDARD 17)
 
@@ -77,3 +69,24 @@ elseif(MSVC)
 else()
   message(FATAL_ERROR "Can't set compile options")
 endif()
+
+
+
+# Install
+
+# Main target
+install(
+  FILES
+  $<TARGET_FILE:${target_name}>
+  COMPONENT Runtime
+  DESTINATION .
+  )
+
+# Data directory - not everyone considers GLOBing good form in a mature project.
+file(GLOB data_yaml data/*.yaml)
+install(
+  FILES
+    ${data_yaml}
+  COMPONENT Runtime
+  DESTINATION crender-data
+  )
