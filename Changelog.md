@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [yy.ddd] - tbd
+- Fix infinte loop in data directory search.
+
+## [0.2] - 2022-01-13
 - Warnings as errors, increase warning level.
 - Make finding the 'Data' directory more robust.
 - Attempt to create output directory when it doesn't exist.
