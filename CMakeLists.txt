@@ -79,6 +79,7 @@ install(
   FILES
   $<TARGET_FILE:${target_name}>
   COMPONENT Runtime
+  PERMISSIONS WORLD_EXECUTE
   DESTINATION .
   )
 
