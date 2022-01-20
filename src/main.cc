@@ -123,6 +123,10 @@ void set_prog_vars() {
       data_path = test_path;
       return;
     }
+    // It's okay to test root path; however, parent_path() of root_path is itself, so this is an infinite loop without this test.
+    if(i == i.root_path()) {
+      break;
+    }
   }
 
   std::cerr << "Failed to find data path given executable path of " << exe_path << std::endl;
@@ -550,4 +554,3 @@ extern "C"
     va_end(argp);
   }
 };
-
