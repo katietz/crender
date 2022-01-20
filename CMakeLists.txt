@@ -7,7 +7,7 @@ project("${target_name}")
 find_package(Git REQUIRED)
 function(add_submodule submodule)
   execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init ${submodule} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-  add_subdirectory(${submodule})
+  add_subdirectory(${submodule} EXCLUDE_FROM_ALL)
 endfunction()
 
 
