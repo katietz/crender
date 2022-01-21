@@ -38,10 +38,16 @@ target_include_directories(${target_name} SYSTEM PRIVATE
 #target_link_directories(${target_name} PRIVATE  # maybe this should be public?
 #  )
 
+if( WIN32 )
+    set(extra_libs "")
+else()
+    set(extra_libs pthread)
+endif()
+
 target_link_libraries(${target_name} PRIVATE # maybe this should be public?
   jinja2cpp
   yaml-cpp
-  pthread
+  ${extra_libs}
 )
 
 if( APPLE OR UNIX OR MINGW )
