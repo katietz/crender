@@ -13,6 +13,8 @@
 #include <vector>
 #include <filesystem>
 
+#include <sb/filesystem/executable_path.h>
+
 #if defined(__APPLE__)
 # include <mach-o/dyld.h>
 #endif
@@ -71,42 +73,9 @@ archs_t known_archs[] = {
 
 namespace {
 
-std::filesystem::path get_executable_path() {
-
-  char dest[PATH_MAX];
-  memset(dest,0,sizeof(dest)); // readlink does not null terminate!
-
-#if defined(__linux__)
-  if (readlink("/proc/self/exe", dest, PATH_MAX) == -1) {
-    perror("readlink");
-  }
-
-#elif defined(__APPLE__)
-  uint32_t size = sizeof(dest);
-  if (_NSGetExecutablePath(dest, &size) != 0) {
-    perror("_NSGetExecutablePath");
-  }
-
-#else
-# error "Need to implement for win, etc"
-#endif
-
-  std::error_code sec;
-  auto rv = std::filesystem::absolute(dest,sec); // Make absolute might not be necessary?
-  // Test for a symlink and follow if so.
-  if(std::filesystem::is_symlink(rv,sec)) {
-    rv = std::filesystem::read_symlink(rv,sec);
-  }
-  // Report any error
-  if(sec) {
-    std::cerr << "get_executable_path() error: " << sec << std::endl;
-  }
-  return rv;
-}
-
 void set_prog_vars() {
 
-  const auto exe_path = get_executable_path();
+  const auto exe_path = sb::filesystem::executable_path();
   if(exe_path.empty()) {
     std::cerr << "Empty executable path" << std::endl;
     exit(-1);

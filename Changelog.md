@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file.
 
 ## [yy.ddd] - tbd
+- Nothing yet...
+
+## [0.3] - 2022-02-02
+- Update for win64.
 - Change CMake to update submodules and add install commands.
 - Add alternate directory search path (`crender-data`).
 - Fix infinte loop in data directory search.
