@@ -3,6 +3,13 @@ cmake_minimum_required(VERSION 3.0.0)
 set(target_name crender)
 project("${target_name}")
 
+
+option(BUILD_CUSTOMER_RELEASE "Build for customer release" Off)
+if( BUILD_CUSTOMER_RELEASE )
+  message("Building customer release.")
+endif()
+
+
 # update submodules
 find_package(Git REQUIRED)
 function(add_submodule submodule)
@@ -50,11 +57,25 @@ target_link_libraries(${target_name} PRIVATE # maybe this should be public?
   ${extra_libs}
 )
 
+if(BUILD_CUSTOMER_RELEASE)
+  # Add -DCUSTOMER_RELEASE when BUILD_CUSTOMER_RELEASE is true.
+  target_compile_definitions(${target_name} PUBLIC CUSTOMER_RELEASE)
+endif()
+
+
 if( APPLE OR UNIX OR MINGW )
+
+  # Allow for a relase build
+  if(BUILD_CUSTOMER_RELEASE)
+    set(WERROR "")
+  else()
+    set(WERROR "-Werror")
+  endif()
+
   target_compile_options(${target_name} PRIVATE
     -Wall
     -Wextra
-    -Werror
+    ${WERROR}
     -Wfloat-equal
     -Wshadow
 #    -Wduplicated-branches
@@ -67,9 +88,17 @@ if( APPLE OR UNIX OR MINGW )
     )
 
 elseif(MSVC)
+
+  # Allow for a relase build
+  if(BUILD_CUSTOMER_RELEASE)
+    set(WERROR "")
+  else()
+    set(WERROR "/WX")
+  endif()
+
   target_compile_options(${target_name} PRIVATE
     /W4
-    /WX
+    ${WERROR}
     )
 
 else()
