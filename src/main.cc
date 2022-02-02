@@ -129,7 +129,7 @@ static void show_usage(const char *fmt,...)
   }
 
   std::cerr << "Usage of " << prog_name << ":" << std::endl
-            << "  Version " CRENDER_VERSION << "  (c) 2021" << std::endl;
+            << "  Version " CRENDER_VERSION << "  (c) 2022" << std::endl;
   std::cerr << "  " << prog_name << " [options] meta.yaml-files" << std::endl << std::endl;
   std::cerr << "  Options:" << std::endl
     << "    -a <arch>    : Add an addition architecture to render" << std::endl
