@@ -1,6 +1,3 @@
-#include "unistd.h"
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
@@ -110,13 +107,6 @@ void set_prog_vars() {
 } // anonymous namespace
 
 
-static bool is_directory(const char *fname)
-{
-  struct stat s;
-  int err = stat(fname, &s);
-  return err != -1 && S_ISDIR(s.st_mode);
-}
-
 static void show_usage(const char *fmt,...)
 {
   va_list argp;
@@ -179,7 +169,8 @@ static bool add_python(const char *arg)
 
 static bool add_cbc(const char *h, const char *arg)
 {
-  if ( access(arg, 0) ) { show_usage("file ,%s' does not exist", arg); return false; }
+  std::error_code sec;
+  if ( !std::filesystem::exists(arg,sec) ) { show_usage("file ,%s' does not exist", arg); return false; }
   if ( is_in_vstr(gbl_cbcs, arg) )
   {
     std::cerr << "file ," << h << "' specified mutliple times" << std::endl;
@@ -220,7 +211,8 @@ static bool parse_args(int argc, char **argv)
   {
     char *h = *argv++;
     if (*h != '-' ) {
-      if ( access(h, 0) ) { seen_error = true; show_usage("input file ,%s' does not exist", h); }
+      std::error_code sec;
+      if ( !std::filesystem::exists(h, sec) ) { seen_error = true; show_usage("input file ,%s' does not exist", h); }
       if ( !is_in_vstr(gbl_ifiles, h) )
         gbl_ifiles.push_back(std::string(h));
       status = true;
@@ -284,23 +276,6 @@ static bool parse_args(int argc, char **argv)
   return status && !seen_error;
 }
 
-static std::string get_file_at_base_of_file(const char *fname, const char *nfname)
-{
-  std::string r = "";
-  const char *h = strrchr(fname, '/');
-  if ( h != NULL )
-  {
-    while(fname < h) r += *fname++;
-    r += "/";
-  }
-  r += nfname;
-  if ( access(r.c_str(), 0) )
-  {
-    // std::cerr << "File " << r << " not found" << std::endl;
-    return "";
-  }
-  return r;
-}
 
 // Entry point
 int main(int argc, char **argv)
@@ -345,54 +320,44 @@ int main(int argc, char **argv)
 
     for (size_t i = 0; i < gbl_ifiles.size(); i++ )
     {
-      std::string fname_o = gbl_ifiles[i];
-      std::string cbc_recipe = "";
-      const char *fname = fname_o.c_str();
-
-      cur_fname = fname;
+      std::filesystem::path fname_1 = gbl_ifiles[i];
+      cur_fname = fname_1.string();
       if (show_eachprocessed_filename)
-        std::cerr << " Process file " << fname << std::endl;
+        std::cerr << " Process file " << fname_1.string() << std::endl;
 
       // extend file name, if required, so that it points to first meta.yaml
-      if ( is_directory(fname) )
+      if ( std::filesystem::is_directory(fname_1,sec) )
       {
-        if (fname[strlen(fname)-1] != '/')
-          fname_o += "/";
-        std::string me;
-        me = fname_o + "meta.yaml";
-        if ( !access(me.c_str(), 0) )
+        auto me = fname_1 / "meta.yaml";
+        if ( std::filesystem::exists(me, sec) )
         {
-          fname_o = me;
+          fname_1 = me;
         }
         else
         {
-          // check if we see a conda_build_config.yaml file in the subdirectory
-          cbc_recipe = get_file_at_base_of_file(fname_o.c_str(), "conda_build_config.yaml");
-          me = fname_o + "recipe/";
-          if (is_directory(me.c_str()))
+          me = fname_1 / "recipe/";
+          if (std::filesystem::is_directory(me,sec))
           {
             me += "meta.yaml";
-            if ( access(me.c_str(), 0) )
+            if ( !std::filesystem::exists(me, sec) )
             {
               msg_error("no meta.yaml file found!\n");
               continue;
             }
-            fname_o = me;
+            fname_1 = me;
           }
         }
-        fname = fname_o.c_str();
       }
-      cur_fname = fname;
+      cur_fname = fname_1.string();
       vstr_t cbcs;
-      std::string root_cbc = get_file_at_base_of_file("", "conda_build_config.yaml");
-      if (root_cbc != "" && !is_in_vstr(gbl_cbcs, root_cbc.c_str()) && !is_in_vstr(cbcs, root_cbc.c_str()))
-        cbcs.push_back(root_cbc);
-      if (cbc_recipe != "" && !is_in_vstr(gbl_cbcs, cbc_recipe.c_str()) && !is_in_vstr(cbcs, cbc_recipe.c_str()))
-        cbcs.push_back(cbc_recipe);
-      // add cbc file in same directory as the meta.yaml file, if present
-      root_cbc = get_file_at_base_of_file(fname, "conda_build_config.yaml");
-      if (root_cbc != "" && !is_in_vstr(gbl_cbcs, root_cbc.c_str()) && !is_in_vstr(cbcs, root_cbc.c_str()))
-        cbcs.push_back(root_cbc);
+      std::filesystem::path root_cbc = "conda_build_config.yaml";
+      if(std::filesystem::exists(root_cbc,sec) && !is_in_vstr(gbl_cbcs, root_cbc.string().c_str()) && !is_in_vstr(cbcs, root_cbc.string().c_str()))
+        cbcs.push_back(root_cbc.string());
+
+      // check if we see a conda_build_config.yaml colocated with meta.yaml
+      auto cbc_recipe = fname_1.parent_path() / "conda_build_config.yaml";
+      if(std::filesystem::exists(cbc_recipe,sec) && !is_in_vstr(gbl_cbcs, cbc_recipe.string().c_str()) && !is_in_vstr(cbcs, cbc_recipe.string().c_str()))
+        cbcs.push_back(cbc_recipe.string());
 
       cbcs.insert(cbcs.end(), gbl_cbcs.begin(), gbl_cbcs.end());
       for (size_t ia = 0; ia < gbl_archs.size(); ia++ )
@@ -419,13 +384,13 @@ int main(int argc, char **argv)
         cr_set_cfg_preset(py2.c_str(), "");
         // set python variable
         yaml_set_cbc_python_as(gbl_python[ip].c_str());
-        if (!cr_read_meta(fname) )
+        if (!cr_read_meta(fname_1.string().c_str()) )
         {
           msg_error("failed to read input file\n");
           break;
         }
         const YAML::Node &th = cr_get_config();
-        std::string feedname = get_feedstockname(fname);
+        std::string feedname = get_feedstockname(fname_1.string().c_str());
         std::string oput = make_filename(gbl_archs[ia], py2, feedname, "meta.yaml");
 
         bool output_this_feedstock = !no_output_file && (ignore_skip || !cr_has_skip(th["package"]));
