@@ -4,7 +4,7 @@ CRENDER
 Version
 -------
 
-This is version 0.1.
+This is version 0.2.
 
 General
 -------
@@ -13,48 +13,36 @@ This is a small tool intended to do linting, pre-rendering, and analysis of cond
 It supports some jinja2 features (be aware it doesn't support full python-language feature)
 It outputs files in yaml format.
 
-Building / Installing
----------------------
+Building
+--------
 
-Right now build scripts are only available for Unix-like operating systems. Nevertheless the
-adjustments required for Windows are pretty straight-forward, and just a few adjustments might be necessary for it.
+Just use cmake as you normally would. For example:
 
-1. Build `Jinja2Cpp` by executing the `bldJinja2Cpp.sh` script (or run its cmake manually).
-Note: Test test-suite is not adjusted, so don't wonder if it fails right now.
-```
-$ ./bldJinja2Cpp.sh 
-```
-
-2. Build `yaml-cpp` by executing the `bldYaml-cpp.sh` script.
-```
-$ ./bldYaml-cpp.sh 
+```sh
+mkdir Build && \
+cd Build && \
+cmake .. -G"Ninja" -DCMAKE_BUILD_TYPE=Release && \
+ninja
 ```
 
-3. Build `crender` itself by executing the `bld.sh` script.
-```
-$ ./bld.sh
-```
+Note that Windows isn't yet completely supported, though it's probably a trivial change.
 
-4. Confirm that `crender` is working.
-```
-$ ./bin/crender --help
-```
+Installing
+----------
 
-5. After building you will find 2 new directories in `crender`'s git root directory.
-    - `pref/`: Contains all binaries created by `Jinja2Cpp` and `yaml-cpp`. 
-    - `bin/`: Contains the created `crender` binary.
-
-    The `crender` binary assumes there is a `data/` directory at the same level as the `bin/` directory. So if you move `crender` somewhere else, don't forget to also move the `data/` directory and its content accordingly.
+The `crender` binary assumes there is a `data/` directory either
+colocated with the execuable or at some level above it. If you move
+`crender`, don't forget to also move the `data/` directory and its
+content accordingly.
 
 Usage
 -----
 
 Example (querying all of the feedstocks for `linux-aarch64`):
+```sh
+./bin/crender -a linux-aarch64 -o ./output_linux-aarch64 -i -S -p 3.8 ../aggregate/*-feedstock
 ```
-    $ ./bin/crender -a linux-aarch64 -o ./output_linux-aarch64 -i -S -p 3.8 ../aggregate/*-feedstock
-```
-NB1: You will ned to make sure the output directory (`-o`) exists before running the command.
-NB2: You can specify multiple python versions using the `-p` parameter, and multiple architectures/subdirs with the `-a` parameter.
+NB1: You can specify multiple python versions using the `-p` parameter, and multiple architectures/subdirs with the `-a` parameter.
 
 Outputs
 -------
@@ -118,5 +106,3 @@ This sources were majorly extended by Kai Tietz by using the same license for it
 yaml-cpp is released under MIT-like license by Jesse Beder.
 
 crender is released under MIT-like license. See LICENSE for more details.
-
-

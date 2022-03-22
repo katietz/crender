@@ -1,6 +1,3 @@
-#include "unistd.h"
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
@@ -8,12 +5,21 @@
 #include <fcntl.h>
 #include <iostream>
 #include <string>
-#include <jinja2cpp/template.h>
-#include <jinja2cpp/user_callable.h>
-#include <jinja2cpp/generic_list_iterator.h>
 #include "prepro.h"
 #include "yaml.h"
 #include <vector>
+#include <filesystem>
+
+#include <sb/filesystem/executable_path.h>
+
+#if defined(__APPLE__)
+# include <mach-o/dyld.h>
+#endif
+
+#if defined(__linux__)
+# include <linux/limits.h>
+#endif
+
 
 // externals from Jinja2 debugging
 namespace jinja2 {
@@ -31,13 +37,14 @@ typedef struct archs_t {
   const char *arch;
 } archs_t;
 
-const char *prog_name = "crender";
-std::string prog_path;
+std::string prog_name = "crender";
+std::filesystem::path data_path;
 
 vstr_t gbl_archs;
 
 vstr_t gbl_cbcs;
-std::string gbl_odir;
+const std::string default_odir = "./crender-out";
+std::string gbl_odir = default_odir;
 vstr_t gbl_ifiles;
 vstr_t gbl_python;
 bool do_cbc_out = false;
@@ -52,38 +59,52 @@ archs_t known_archs[] = {
   { "win-64" },
   { "linux-32" },
   { "linux-64" },
-  { "linux-ppcle64" },
-  { "linux-ppc64" },
+  { "linux-ppc64le" },
   { "linux-aarch64" },
   { "linux-s390x" },
   { "osx-64" },
   { NULL }
 };
 
-static void set_prog_vars(const char *pr)
-{
-  const char *r = std::strrchr(pr, '/');
-  const char *r2 = std::strrchr(pr, '\\');
-  if (r && r2) r = r < r2 ? r2 : r;
-  if (!r) r = r2;
-  if (!r)
-  {
-    prog_path="./";
-    prog_name=pr;
-    return;
+
+namespace {
+
+void set_prog_vars() {
+
+  const auto exe_path = sb::filesystem::executable_path();
+  if(exe_path.empty()) {
+    std::cerr << "Empty executable path" << std::endl;
+    exit(-1);
   }
-  r++;
-  for (r2 = pr; r2 < r; r2++)
-    prog_path += *r2;
-  prog_name = r;
+
+  // set filename
+  prog_name = exe_path.filename().string();
+
+  // Find and set data_path according to executable location.
+  std::error_code sec;
+  for(auto i = exe_path.parent_path(); !i.empty(); i = i.parent_path()) {
+    auto test_path = i/"crender-data";
+    if(std::filesystem::exists(test_path,sec)) {
+      data_path = test_path;
+      return;
+    }
+    test_path = i/"data";
+    if(std::filesystem::exists(test_path,sec)) {
+      data_path = test_path;
+      return;
+    }
+    // It's okay to test root path; however, parent_path() of root_path is itself, so this is an infinite loop without this test.
+    if(i == i.root_path()) {
+      break;
+    }
+  }
+
+  std::cerr << "Failed to find data path given executable path of " << exe_path << std::endl;
+  exit(-1);
 }
 
-static bool is_directory(const char *fname)
-{
-  struct stat s;
-  int err = stat(fname, &s);
-  return err != -1 && S_ISDIR(s.st_mode);
-}
+} // anonymous namespace
+
 
 static void show_usage(const char *fmt,...)
 {
@@ -93,11 +114,11 @@ static void show_usage(const char *fmt,...)
   {
     char s[1024];
     vsprintf(s, fmt, argp);
-    std::cerr << "*** " << (const char *) &s[0] << " ***" << std::endl;
+    std::cerr << "*** " << reinterpret_cast<const char *>(&s[0]) << " ***" << std::endl;
   }
 
   std::cerr << "Usage of " << prog_name << ":" << std::endl
-            << "  Version " CRENDER_VERSION << "  (c) 2021" << std::endl;
+            << "  Version " CRENDER_VERSION << "  (c) 2022" << std::endl;
   std::cerr << "  " << prog_name << " [options] meta.yaml-files" << std::endl << std::endl;
   std::cerr << "  Options:" << std::endl
     << "    -a <arch>    : Add an addition architecture to render" << std::endl
@@ -107,6 +128,7 @@ static void show_usage(const char *fmt,...)
     << "    -m <cbc-file>: Add an additional conda_build_config.yaml file" << std::endl
     << "    -o <dir>     : Specify output directory of rendered file"  << std::endl
     << "                   If '-' is provided output will be done on stdout" << std::endl
+    << "                   If not specified '" << default_odir << "' is used as default" << std::endl
     << "    -p <python>  : Specify to be rendered python version" << std::endl
     << "                   If not specified '3.9' is used as default" << std::endl
     << "    -s           : Toggle check of skip in meta.yaml (by default enabled)" << std::endl
@@ -122,28 +144,6 @@ static void show_usage(const char *fmt,...)
     std::cerr << " " << known_archs[i].arch;
   std::cerr << std::endl;
 
-}
-
-static bool set_output(const char *h, const char *arg)
-{
-  if ( gbl_odir != "" )
-    std::cerr << "  *** warning: overriding already specified output directory ***" << std::endl;
-  do {
-    if ( !strcmp(arg, "-") )
-      break;
-    if ( *arg != 0 && access(arg, 0) )
-    {
-      mkdir(arg, 0777);
-      if ( access(arg,0) )
-      {
-        std::cerr << " *** unable to create output directory " << arg << std::endl;
-        return false;
-      }
-    }
-  } while (0);
-  gbl_odir = arg;
-
-  return true;
 }
 
 static bool is_in_vstr(const vstr_t &v, const char *str)
@@ -168,7 +168,8 @@ static bool add_python(const char *arg)
 
 static bool add_cbc(const char *h, const char *arg)
 {
-  if ( access(arg, 0) ) { show_usage("file ,%s' does not exist", arg); return false; }
+  std::error_code sec;
+  if ( !std::filesystem::exists(arg,sec) ) { show_usage("file ,%s' does not exist", arg); return false; }
   if ( is_in_vstr(gbl_cbcs, arg) )
   {
     std::cerr << "file ," << h << "' specified mutliple times" << std::endl;
@@ -209,7 +210,8 @@ static bool parse_args(int argc, char **argv)
   {
     char *h = *argv++;
     if (*h != '-' ) {
-      if ( access(h, 0) ) { seen_error = true; show_usage("input file ,%s' does not exist", h); }
+      std::error_code sec;
+      if ( !std::filesystem::exists(h, sec) ) { seen_error = true; show_usage("input file ,%s' does not exist", h); }
       if ( !is_in_vstr(gbl_ifiles, h) )
         gbl_ifiles.push_back(std::string(h));
       status = true;
@@ -233,9 +235,18 @@ static bool parse_args(int argc, char **argv)
                 show_eachprocessed_filename = true;
                 break;
       case 'o':
-                if (! argc ) { show_usage("missing argument for option '%s'", h); seen_error = true; break; }
-                seen_error &= set_output(h, *argv++); --argc;
-                break;
+                {
+                  if (! argc ) {
+                    show_usage("missing argument for option '%s'", h);
+                    seen_error = true;
+                    break;
+                  }
+                  if ( gbl_odir != default_odir )
+                    std::cerr << "  *** warning: overriding already specified output directory ***" << std::endl;
+                  gbl_odir = *argv;
+                  ++argv; --argc;
+                  break;
+                }
       case 'p':
                 if (! argc ) { show_usage("missing argument for option '%s'", h); seen_error = true; break; }
                 seen_error &= add_python(*argv++); --argc;
@@ -264,33 +275,24 @@ static bool parse_args(int argc, char **argv)
   return status && !seen_error;
 }
 
-static std::string get_file_at_base_of_file(const char *fname, const char *nfname)
-{
-  std::string r = "";
-  const char *h = strrchr(fname, '/');
-  if ( h != NULL )
-  {
-    while(fname < h) r += *fname++;
-    r += "/";
-  }
-  r += nfname;
-  if ( access(r.c_str(), 0) )
-  {
-    // std::cerr << "File " << r << " not found" << std::endl;
-    return "";
-  }
-  return r;
-}
 
 // Entry point
 int main(int argc, char **argv)
 {
   // set initial prog_name and prog_path variables
-  set_prog_vars(argv[0]);
+  set_prog_vars();
 
   // scan arguments
   if (! parse_args(argc-1, &argv[1]) )
     return 0;
+
+  // ensure output file exists
+  std::error_code sec;
+  std::filesystem::create_directories(gbl_odir,sec);
+  if(sec) {
+    std::cerr << "failure in finding/creating output directory: " << gbl_odir << std::endl;
+    return -1;
+  }
 
   // set python 3.9 as default, if no python was specified
   if ( gbl_python.size() == 0)
@@ -317,61 +319,52 @@ int main(int argc, char **argv)
 
     for (size_t i = 0; i < gbl_ifiles.size(); i++ )
     {
-      std::string fname_o = gbl_ifiles[i];
-      std::string cbc_recipe = "";
-      const char *fname = fname_o.c_str();
-
-      cur_fname = fname;
+      std::filesystem::path fname_1 = gbl_ifiles[i];
+      cur_fname = fname_1.string();
       if (show_eachprocessed_filename)
-        std::cerr << " Process file " << fname << std::endl;
+        std::cerr << " Process file " << fname_1.string() << std::endl;
 
       // extend file name, if required, so that it points to first meta.yaml
-      if ( is_directory(fname) )
+      if ( std::filesystem::is_directory(fname_1,sec) )
       {
-        if (fname[strlen(fname)-1] != '/')
-          fname_o += "/";
-        std::string me;
-        me = fname_o + "meta.yaml";
-        if ( !access(me.c_str(), 0) )
+        auto me = fname_1 / "meta.yaml";
+        if ( std::filesystem::exists(me, sec) )
         {
-          fname_o = me;
+          fname_1 = me;
         }
         else
         {
-          // check if we see a conda_build_config.yaml file in the subdirectory
-          cbc_recipe = get_file_at_base_of_file(fname_o.c_str(), "conda_build_config.yaml");
-          me = fname_o + "recipe/";
-          if (is_directory(me.c_str()))
+          me = fname_1 / "recipe/";
+          if (std::filesystem::is_directory(me,sec))
           {
             me += "meta.yaml";
-            if ( access(me.c_str(), 0) )
+            if ( !std::filesystem::exists(me, sec) )
             {
               msg_error("no meta.yaml file found!\n");
               continue;
             }
-            fname_o = me;
+            fname_1 = me;
           }
         }
-        fname = fname_o.c_str();
       }
-      cur_fname = fname;
+      cur_fname = fname_1.string();
       vstr_t cbcs;
-      std::string root_cbc = get_file_at_base_of_file("", "conda_build_config.yaml");
-      if (root_cbc != "" && !is_in_vstr(gbl_cbcs, root_cbc.c_str()) && !is_in_vstr(cbcs, root_cbc.c_str()))
-        cbcs.push_back(root_cbc);
-      if (cbc_recipe != "" && !is_in_vstr(gbl_cbcs, cbc_recipe.c_str()) && !is_in_vstr(cbcs, cbc_recipe.c_str()))
-        cbcs.push_back(cbc_recipe);
-      // add cbc file in same directory as the meta.yaml file, if present
-      root_cbc = get_file_at_base_of_file(fname, "conda_build_config.yaml");
-      if (root_cbc != "" && !is_in_vstr(gbl_cbcs, root_cbc.c_str()) && !is_in_vstr(cbcs, root_cbc.c_str()))
-        cbcs.push_back(root_cbc);
+      std::filesystem::path root_cbc = "conda_build_config.yaml";
+      if(std::filesystem::exists(root_cbc,sec) && !is_in_vstr(gbl_cbcs, root_cbc.string().c_str()) && !is_in_vstr(cbcs, root_cbc.string().c_str()))
+        cbcs.push_back(root_cbc.string());
+
+      // check if we see a conda_build_config.yaml colocated with meta.yaml
+      auto cbc_recipe = fname_1.parent_path() / "conda_build_config.yaml";
+      if(std::filesystem::exists(cbc_recipe,sec) && !is_in_vstr(gbl_cbcs, cbc_recipe.string().c_str()) && !is_in_vstr(cbcs, cbc_recipe.string().c_str()))
+        cbcs.push_back(cbc_recipe.string());
 
       cbcs.insert(cbcs.end(), gbl_cbcs.begin(), gbl_cbcs.end());
       for (size_t ia = 0; ia < gbl_archs.size(); ia++ )
       {
         // std::cerr << "  for arch " << gbl_archs[ia] << " ..." << std::endl;
         // we read default settings for architecture in front
-        std::string arch_cfg = prog_path + "../data/cbc_" + gbl_archs[ia] + ".yaml";
+        std::filesystem::path arch_file = std::string("cbc_") + gbl_archs[ia] + ".yaml";
+        std::string arch_cfg = (data_path / arch_file).string();
         if ( !cr_read_config(arch_cfg.c_str(), true, "config") )
         {
           msg_error("failed to read configuration ,%s'\n", arch_cfg.c_str());
@@ -390,13 +383,13 @@ int main(int argc, char **argv)
         cr_set_cfg_preset(py2.c_str(), "");
         // set python variable
         yaml_set_cbc_python_as(gbl_python[ip].c_str());
-        if (!cr_read_meta(fname) )
+        if (!cr_read_meta(fname_1.string().c_str()) )
         {
           msg_error("failed to read input file\n");
           break;
         }
         const YAML::Node &th = cr_get_config();
-        std::string feedname = get_feedstockname(fname);
+        std::string feedname = get_feedstockname(fname_1.string().c_str());
         std::string oput = make_filename(gbl_archs[ia], py2, feedname, "meta.yaml");
 
         bool output_this_feedstock = !no_output_file && (ignore_skip || !cr_has_skip(th["package"]));
@@ -490,7 +483,7 @@ extern "C"
     msg_output("ERROR", fmt, argp);
     va_end(argp);
   }
-  
+
   void msg_warn(const char *fmt, ...)
   {
     va_list argp;
@@ -499,4 +492,3 @@ extern "C"
     va_end(argp);
   }
 };
-
